@@ -181,8 +181,8 @@ public class PreferencesObjectSupplier extends ExtendedObjectSupplier implements
 			return;
 		String cacheKey = scope.name() + "/" + nodePath; //$NON-NLS-1$
 		synchronized (listenerCache) {
-			if (listenerCache.containsKey(nodePath)) {
-				HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(nodePath);
+			if (listenerCache.containsKey(cacheKey)) {
+				HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(cacheKey);
 				if (map.containsKey(key)) {
 					for (PrefInjectionListener listener : map.get(key)) {
 						IRequestor previousRequestor = listener.getRequestor();
