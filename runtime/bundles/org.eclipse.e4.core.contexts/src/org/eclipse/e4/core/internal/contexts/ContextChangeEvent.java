@@ -77,6 +77,12 @@ public final class ContextChangeEvent {
 	 */
 	public static final int RECALC = 6;
 
+	/**
+	 * A change event type (value "7"), indicating that a context has been
+	 * reparented.
+	 */
+	public static final int REPARENTED = 7;
+
 	private final Object[] args;
 	private final IEclipseContext context;
 	private final int eventType;
