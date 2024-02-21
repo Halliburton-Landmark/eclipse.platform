@@ -14,6 +14,7 @@
 package org.eclipse.e4.core.internal.contexts;
 
 import java.lang.ref.Reference;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import org.eclipse.e4.core.contexts.IEclipseContext;
@@ -63,8 +64,9 @@ public class TrackableComputationExt extends Computation {
 	public void handleInvalid(ContextChangeEvent event, Set<Scheduled> scheduledList) {
 		//	don't call super - we keep the link unless uninjected / disposed
 		int eventType = event.getEventType();
-		if (eventType == ContextChangeEvent.INITIAL || eventType == ContextChangeEvent.DISPOSE) {
-			// process right away
+		if (eventType == ContextChangeEvent.INITIAL || eventType == ContextChangeEvent.DISPOSE
+				|| eventType == ContextChangeEvent.REPARENTED) {
+			// process structural changes immediately
 			update(event);
 		} else {
 			// schedule processing
@@ -74,12 +76,20 @@ public class TrackableComputationExt extends Computation {
 
 	public boolean update(ContextChangeEvent event) {
 		// is this a structural event?
-		// structural changes: INITIAL, DISPOSE, UNINJECTED are always processed right away
-		int eventType = event.getEventType();
+		// structural changes: INITIAL, DISPOSE, UNINJECTED, are REPARENTED are always
+		// processed immediately
+		final int eventType = event.getEventType();
+		final EclipseContext eventsContext = (EclipseContext) event.getContext();
+		if (eventType == ContextChangeEvent.REPARENTED) {
+			if (Arrays.stream(event.getArguments()).anyMatch(c -> c == originatingContext)) {
+				eventsContext.removeRAT(this);
+				cachedEvent = null;
+			}
+			return false;
+		}
 		if ((runnable instanceof RunAndTrackExt) && ((RunAndTrackExt) runnable).batchProcess()) {
 			if ((eventType == ContextChangeEvent.ADDED) || (eventType == ContextChangeEvent.REMOVED)) {
 				cachedEvent = event;
-				EclipseContext eventsContext = (EclipseContext) event.getContext();
 				eventsContext.addWaiting(this);
 				return true;
 			}
@@ -107,10 +117,9 @@ public class TrackableComputationExt extends Computation {
 		} finally {
 			((EclipseContext) originatingContext).popComputation(this);
 		}
-		EclipseContext eventsContext = (EclipseContext) event.getContext();
 
 		if (eventType == ContextChangeEvent.DISPOSE) {
-			if (originatingContext.equals(eventsContext)) {
+			if (originatingContext == eventsContext) {
 				((EclipseContext) originatingContext).removeRAT(this);
 				return false;
 			}
