@@ -31,4 +31,6 @@ public @interface Preference {
 	String value() default ""; // key in the node
 
 	String nodePath() default "";
+
+	String scope() default "";
 }

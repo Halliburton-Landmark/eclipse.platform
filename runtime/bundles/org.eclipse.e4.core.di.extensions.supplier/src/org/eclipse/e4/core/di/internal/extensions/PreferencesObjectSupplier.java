@@ -40,6 +40,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.osgi.service.prefs.Preferences;
 
 /**
  * Note: we do not support byte arrays in preferences at this time. This class
@@ -105,16 +106,17 @@ public class PreferencesObjectSupplier extends ExtendedObjectSupplier implements
 		if (descriptor == null)
 			return null;
 		Class<?> descriptorsClass = getDesiredClass(descriptor.getDesiredType());
-		String nodePath = getNodePath(descriptor, requestor.getRequestingObjectClass());
+		Preference qualifier = descriptor.getQualifier(Preference.class);
+		String nodePath = getNodePath(qualifier, requestor.getRequestingObjectClass());
+		Preferences scope = getScope(qualifier);
 		if (IEclipsePreferences.class.equals(descriptorsClass)) {
-			return InstanceScope.INSTANCE.getNode(nodePath);
+			return scope.node(nodePath);
 		}
-
-		String key = getKey(descriptor);
+		String key = qualifier.value();
 		if (key == null || nodePath == null || key.isEmpty() || nodePath.isEmpty())
 			return IInjector.NOT_A_VALUE;
 		if (track)
-			addListener(nodePath, key, requestor);
+			addListener(scope, nodePath, key, requestor);
 
 		if (descriptorsClass.isPrimitive()) {
 			if (descriptorsClass.equals(boolean.class))
@@ -156,19 +158,8 @@ public class PreferencesObjectSupplier extends ExtendedObjectSupplier implements
 		return null;
 	}
 
-	private String getKey(IObjectDescriptor descriptor) {
-		if (descriptor == null)
-			return null;
-		Preference qualifier = descriptor.getQualifier(Preference.class);
-		return qualifier.value();
-	}
-
-	private String getNodePath(IObjectDescriptor descriptor, Class<?> requestingObject) {
-		if (descriptor == null)
-			return null;
-		Preference qualifier = descriptor.getQualifier(Preference.class);
+	private String getNodePath(Preference qualifier, Class<?> requestingObject) {
 		String nodePath = qualifier.nodePath();
-
 		if (nodePath == null || nodePath.isEmpty()) {
 			if (requestingObject == null)
 				return null;
@@ -177,12 +168,21 @@ public class PreferencesObjectSupplier extends ExtendedObjectSupplier implements
 		return nodePath;
 	}
 
-	private void addListener(String nodePath, String key, final IRequestor requestor) {
+	private Preferences getScope(Preference qualifier) {
+		String scope = qualifier.scope();
+		if (scope == null || scope.isEmpty()) {
+			scope = System.getProperty("DEFAULT_PREFERENCE_SCOPE", InstanceScope.INSTANCE.getName()); //$NON-NLS-1$
+		}
+		return getPreferencesService().getRootNode().node(scope);
+	}
+
+	private void addListener(Preferences scope, String nodePath, String key, final IRequestor requestor) {
 		if (requestor == null)
 			return;
+		String cacheKey = scope.name() + "/" + nodePath; //$NON-NLS-1$
 		synchronized (listenerCache) {
-			if (listenerCache.containsKey(nodePath)) {
-				HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(nodePath);
+			if (listenerCache.containsKey(cacheKey)) {
+				HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(cacheKey);
 				if (map.containsKey(key)) {
 					for (PrefInjectionListener listener : map.get(key)) {
 						IRequestor previousRequestor = listener.getRequestor();
@@ -192,15 +192,18 @@ public class PreferencesObjectSupplier extends ExtendedObjectSupplier implements
 				}
 			}
 		}
-		final IEclipsePreferences node = InstanceScope.INSTANCE.getNode(nodePath);
+		final Preferences preference = scope.node(nodePath);
+		if (!IEclipsePreferences.class.isInstance(preference))
+			return;
+		final IEclipsePreferences node = (IEclipsePreferences) preference;
 		PrefInjectionListener listener = new PrefInjectionListener(node, key, requestor);
 		node.addPreferenceChangeListener(listener);
 
 		synchronized (listenerCache) {
-			HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(nodePath);
+			HashMap<String, List<PrefInjectionListener>> map = listenerCache.get(cacheKey);
 			if (map == null) {
 				map = new HashMap<>();
-				listenerCache.put(nodePath, map);
+				listenerCache.put(cacheKey, map);
 			}
 			List<PrefInjectionListener> listeningRequestors = map.get(key);
 			if (listeningRequestors == null) {
