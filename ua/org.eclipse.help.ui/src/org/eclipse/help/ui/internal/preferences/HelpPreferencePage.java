@@ -38,6 +38,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.PlatformUI;
@@ -262,6 +263,16 @@ public class HelpPreferencePage extends PreferencePage implements
 		IEclipsePreferences pref = InstanceScope.INSTANCE.getNode(HelpBasePlugin.PLUGIN_ID);
 		if (useExternalCombo != null) {
 			boolean isExternalBrowser = useExternalCombo.getText().equals(Messages.HelpPreferencePage_externalBrowser);
+			// Temporary Fix: Help-DS isn't responding upon closing Help in the help browser
+			// and dialog tray (Linux). Temporary solution - block "in the help browser".
+			// Will fix in the next release.
+			if (!isExternalBrowser) {
+				MessageBox messageBox = new MessageBox(useExternalCombo.getShell(), SWT.ICON_WARNING | SWT.OK);
+				messageBox.setText("Warning"); //$NON-NLS-1$
+				messageBox.setMessage("Internal browser is not supported!"); //$NON-NLS-1$
+				messageBox.open();
+				return false;
+			}
 			pref.putBoolean(IHelpBaseConstants.P_KEY_ALWAYS_EXTERNAL_BROWSER,
 					isExternalBrowser);
 			BrowserManager.getInstance().setAlwaysUseExternal(

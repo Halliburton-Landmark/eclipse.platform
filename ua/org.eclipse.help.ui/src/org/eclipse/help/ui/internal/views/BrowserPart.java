@@ -48,6 +48,8 @@ import org.eclipse.swt.custom.BusyIndicator;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IMemento;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.forms.AbstractFormPart;
 import org.eclipse.ui.forms.widgets.FormToolkit;
@@ -179,13 +181,18 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 		browser.addOpenWindowListener(event -> {
 			if (statusURL != null) {
 				try {
-					String relativeURL = BaseHelpSystem.unresolve(new URL(statusURL));
+					URL targetURL = new URL(statusURL);
+					String relativeURL = BaseHelpSystem.unresolve(targetURL);
 					if (BrowserPart.this.parent.isHelpResource(relativeURL)) {
 						BrowserPart.this.parent.showExternalURL(relativeURL);
-						event.required = true;
+					} else {
+						PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(targetURL);
 					}
+					event.required = true;
 				} catch (MalformedURLException e) {
 					ILog.of(getClass()).error("Malformed URL: " + statusURL, e); //$NON-NLS-1$
+				} catch (PartInitException e) {
+					ILog.of(getClass()).error("Can't open link in external browser: " + statusURL, e); //$NON-NLS-1$
 				}
 			}
 		});
