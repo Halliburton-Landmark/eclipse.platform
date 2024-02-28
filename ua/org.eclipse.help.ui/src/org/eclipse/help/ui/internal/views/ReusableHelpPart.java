@@ -830,8 +830,12 @@ public class ReusableHelpPart implements IHelpUIConstants, IActivityManagerListe
 		page.addPart(HV_RELATED_TOPICS, true);
 		pages.add(page);
 
+		// BUG 381953
+        // Temporary hide Index action as it is not used at this time, Help do not implement an index
+        // See also: SeeAlsoPart#addLinks
+
 		// index page
-		page = new HelpPartPage(HV_INDEX_PAGE,
+		/*page = new HelpPartPage(HV_INDEX_PAGE,
 				Messages.ReusableHelpPart_indexPage_name,
 				IHelpUIConstants.IMAGE_INDEX);
 		page.setVerticalSpacing(0);
@@ -840,7 +844,7 @@ public class ReusableHelpPart implements IHelpUIConstants, IActivityManagerListe
 		page.addPart(HV_SCOPE_SELECT, false);
 		page.addPart(HV_INDEX_TYPEIN, false);
 		page.addPart(HV_INDEX, true);
-		pages.add(page);
+		pages.add(page);*/
 	}
 
 	public void init(IActionBars bars, IToolBarManager toolBarManager,
