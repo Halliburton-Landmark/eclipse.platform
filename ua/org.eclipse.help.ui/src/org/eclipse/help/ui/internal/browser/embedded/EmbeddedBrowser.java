@@ -39,6 +39,7 @@ import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.LocationAdapter;
 import org.eclipse.swt.browser.LocationEvent;
 import org.eclipse.swt.browser.LocationListener;
+import org.eclipse.swt.browser.ProgressEvent;
 import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.browser.VisibilityWindowListener;
 import org.eclipse.swt.browser.WindowEvent;
@@ -50,6 +51,7 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Shell;
@@ -343,13 +345,30 @@ public class EmbeddedBrowser {
 		browser.addProgressListener(ProgressListener.changedAdapter(event -> {
 			if (event.total <= 0 || changingLocationHolder.get() == null)
 				return;
-			statusBarProgress.setMaximum(event.total);
+			boolean isLinux = System.getProperty("os.name").toLowerCase() //$NON-NLS-1$
+					.contains("linux"); //$NON-NLS-1$
+			if (isLinux) {
+		        Display.getCurrent().asyncExec(new Runnable() {
+                    @Override
+					public void run() {
+        		    	updateStatusProgress(event);
+                    }
+                });
+		    } else {
+		    	updateStatusProgress(event);
+		    }
+		}));
+	}
+
+	private void updateStatusProgress(ProgressEvent event) {
+		if (statusBarProgress != null && !statusBarProgress.isDisposed()) {
+            statusBarProgress.setMaximum(event.total);
 			statusBarProgress.setSelection(Math.min(event.current, event.total));
 			if (event.current < event.total) {
 				statusBarSeparator.setVisible(true);
 				statusBarProgress.setVisible(true);
 			}
-		}));
+		}
 	}
 
 	private void createStatusBar(Composite parent) {

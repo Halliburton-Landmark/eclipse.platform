@@ -37,6 +37,7 @@ import org.eclipse.help.internal.base.HelpEvaluationContext;
 import org.eclipse.help.internal.context.Context;
 import org.eclipse.help.ui.internal.DefaultHelpUI;
 import org.eclipse.help.ui.internal.ExecuteCommandAction;
+import org.eclipse.help.ui.internal.HelpUIPlugin;
 import org.eclipse.help.ui.internal.HelpUIResources;
 import org.eclipse.help.ui.internal.IHelpUIConstants;
 import org.eclipse.help.ui.internal.Messages;
@@ -45,6 +46,8 @@ import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogPage;
 import org.eclipse.jface.dialogs.IPageChangeProvider;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.IWizardContainer;
@@ -56,6 +59,7 @@ import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -67,7 +71,9 @@ import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
+import org.eclipse.ui.commands.ICommandImageService;
 import org.eclipse.ui.forms.IFormColors;
 import org.eclipse.ui.forms.SectionPart;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
@@ -258,8 +264,7 @@ public class ContextHelpPart extends SectionPart implements IHelpPart {
 		String sHref = (String)href;
 		if (sHref.startsWith("command://")) { //$NON-NLS-1$
 			doRunCommand(sHref.substring(10));
-		}
-		else {
+		} else {
 			parent.showURL(sHref);
 		}
 	}
@@ -323,6 +328,8 @@ public class ContextHelpPart extends SectionPart implements IHelpPart {
 		String helpText;
 		if (lastContext!=null) {
 			helpText = formatHelpContext(lastContext);
+			initCommandIcons(lastContext);
+
 			if (HelpPlugin.DEBUG_CONTEXT) {
 				System.out.println("Context Activation, context =  " + lastContext.getText()); //$NON-NLS-1$
 			}
@@ -539,6 +546,7 @@ public class ContextHelpPart extends SectionPart implements IHelpPart {
 				IContext helpContext = findHelpContext(page);
 				if (helpContext != null) {
 					text = formatHelpContext(helpContext);
+					initCommandIcons(helpContext);
 					lastContext = helpContext;
 				}
 			}
@@ -583,7 +591,7 @@ public class ContextHelpPart extends SectionPart implements IHelpPart {
 					}
 					category = null;
 					sbuf.append("<li style=\"image\" value=\""); //$NON-NLS-1$
-					sbuf.append(IHelpUIConstants.IMAGE_COMMAND_F1TOPIC);
+					sbuf.append(parseCommandId(commands[i].getSerialization()));
 					sbuf.append("\" indent=\"21\">"); //$NON-NLS-1$
 					sbuf.append("<a href=\"command://"); //$NON-NLS-1$
 					sbuf.append(commands[i].getSerialization());
@@ -657,6 +665,44 @@ public class ContextHelpPart extends SectionPart implements IHelpPart {
 		sbuf.append("</form>"); //$NON-NLS-1$
 		return sbuf.toString();
 	}
+
+    private static String parseCommandId(String serializedCommand) {
+        String commandId = serializedCommand;
+        int index = commandId.indexOf("("); //$NON-NLS-1$
+        if (index != -1) {
+            commandId = commandId.substring(0, index);
+        }
+        return commandId;
+    }
+
+    private void initCommandIcons(IContext helpContext) {
+        if (!(helpContext instanceof IContext3)) {
+            return;
+        }
+
+        ICommandLink[] commands = ((IContext3) helpContext).getRelatedCommands();
+        for (int i = 0; i < commands.length; i++) {
+            String commandId = parseCommandId(commands[i].getSerialization());
+            text.setImage(commandId, getImageForCommand(commandId));
+        }
+    }
+
+    private static Image getImageForCommand(String commandId) {
+        ICommandImageService imageService = PlatformUI.getWorkbench()
+                .getService(ICommandImageService.class);
+
+        ImageDescriptor descriptor = imageService.getImageDescriptor(commandId);
+        if (descriptor == null) {
+            return null;
+        }
+
+        ImageRegistry registry = HelpUIPlugin.getDefault().getImageRegistry();
+        ImageDescriptor cachedDescriptor = registry.getDescriptor(commandId);
+        if (cachedDescriptor == null) {
+            registry.put(commandId, descriptor);
+        }
+        return registry.get(commandId);
+    }
 
 	private void addCategory(StringBuilder sbuf, String category) {
 		if (category == null)

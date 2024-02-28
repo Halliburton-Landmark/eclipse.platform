@@ -264,17 +264,20 @@ public class EngineResultSection {
 	}
 
 	private void asyncUpdateResults(boolean now, final boolean scrollToBeginning) {
-		Runnable runnable = () -> BusyIndicator.showWhile(PlatformUI.getWorkbench().getDisplay(), () -> {
-			if (section.isDisposed()) {
-				return;
-			}
-			updateResults(true);
-			if (scrollToBeginning) {
-				searchResults.setFocus();
-				FormToolkit.setControlVisible(section, true);
-				part.updateSeparatorVisibility();
-			}
-		});
+		Runnable runnable = () -> {
+			BusyIndicator.showWhile(PlatformUI.getWorkbench().getDisplay(), () -> {
+				if (section.isDisposed()) {
+					return;
+				}
+				updateResults(true);
+				if (scrollToBeginning) {
+					searchResults.setFocus();
+					FormToolkit.setControlVisible(section, true);
+					part.updateSeparatorVisibility();
+				}
+			});
+		};
+
 		if (section.isDisposed()) {
 			return;
 		}

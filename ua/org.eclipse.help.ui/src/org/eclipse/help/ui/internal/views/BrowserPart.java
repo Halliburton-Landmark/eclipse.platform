@@ -47,7 +47,10 @@ import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.custom.BusyIndicator;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.forms.AbstractFormPart;
 import org.eclipse.ui.forms.widgets.FormToolkit;
@@ -126,45 +129,82 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 		});
 		browser.addProgressListener(new ProgressListener() {
 
+			boolean isLinux = System.getProperty("os.name").toLowerCase() //$NON-NLS-1$
+					.contains("linux"); //$NON-NLS-1$
+
 			@Override
 			public void changed(ProgressEvent e) {
+
 				if (e.current == e.total)
 					return;
-				IStatusLineManager slm = BrowserPart.this.parent
-						.getStatusLineManager();
-				IProgressMonitor monitor = slm != null ? slm
-						.getProgressMonitor() : null;
-				if (lastProgress == -1) {
-					lastProgress = 0;
-					if (monitor != null) {
-						monitor.beginTask("", e.total); //$NON-NLS-1$
-						slm.setCancelEnabled(true);
-					}
-				} else if (monitor != null && monitor.isCanceled()) {
-					browser.stop();
-					return;
+
+				if (isLinux) {
+					Display.getCurrent().asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							if (!browser.isDisposed()) {
+								updateBrowserWork(e);
+							}
+						}
+					});
+				} else {
+				    updateBrowserWork(e);
 				}
-				if (monitor != null)
-					monitor.worked(e.current - lastProgress);
-				lastProgress = e.current;
 			}
 
 			@Override
 			public void completed(ProgressEvent e) {
-				IStatusLineManager slm = BrowserPart.this.parent
-						.getStatusLineManager();
-				IProgressMonitor monitor = slm != null ? slm
-						.getProgressMonitor() : null;
-				if (monitor != null) {
-					slm.setCancelEnabled(false);
-					monitor.done();
-				}
-				lastProgress = -1;
-				if (fontScalePercentage != 100) {
-					rescale();
-				}
-				String value = executeQuery("document.title"); //$NON-NLS-1$
-				BrowserPart.this.title = value != null ? value : "N/A"; //$NON-NLS-1$
+			    if (isLinux) {
+                    Display.getCurrent().asyncExec(new Runnable() {
+                        @Override
+						public void run() {
+                            completeWork();
+                        }
+                    });
+                } else {
+                    completeWork();
+                }
+			}
+
+			private void updateBrowserWork(ProgressEvent e) {
+			    IStatusLineManager slm = BrowserPart.this.parent
+                        .getStatusLineManager();
+                IProgressMonitor monitor = slm != null ? slm
+                        .getProgressMonitor() : null;
+                if (lastProgress == -1) {
+                    lastProgress = 0;
+                    if (monitor != null) {
+                        monitor.beginTask("", e.total); //$NON-NLS-1$
+                        slm.setCancelEnabled(true);
+                    }
+                } else if (monitor != null && monitor.isCanceled()) {
+                    browser.stop();
+                    return;
+                }
+                if (monitor != null)
+                    monitor.worked(e.current - lastProgress);
+                lastProgress = e.current;
+			}
+
+			private void completeWork() {
+			    IStatusLineManager slm = BrowserPart.this.parent
+                        .getStatusLineManager();
+                IProgressMonitor monitor = slm != null ? slm
+                        .getProgressMonitor() : null;
+                if (monitor != null) {
+                    slm.setCancelEnabled(false);
+                    monitor.done();
+                }
+                lastProgress = -1;
+
+                // The method is called in async way so the browser may have been disposed
+                if (!browser.isDisposed()) {
+	                if (fontScalePercentage != 100) {
+	                    rescale();
+	                }
+	                String value = executeQuery("document.title"); //$NON-NLS-1$
+	                BrowserPart.this.title = value != null ? value : "N/A"; //$NON-NLS-1$
+                }
 			}
 		});
 		browser.addStatusTextListener(event -> {
@@ -179,13 +219,18 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 		browser.addOpenWindowListener(event -> {
 			if (statusURL != null) {
 				try {
-					String relativeURL = BaseHelpSystem.unresolve(new URL(statusURL));
+					URL targetURL = new URL(statusURL);
+					String relativeURL = BaseHelpSystem.unresolve(targetURL);
 					if (BrowserPart.this.parent.isHelpResource(relativeURL)) {
 						BrowserPart.this.parent.showExternalURL(relativeURL);
-						event.required = true;
+					} else {
+						PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(targetURL);
 					}
+					event.required = true;
 				} catch (MalformedURLException e) {
 					ILog.of(getClass()).error("Malformed URL: " + statusURL, e); //$NON-NLS-1$
+				} catch (PartInitException e) {
+					ILog.of(getClass()).error("Can't open link in external browser: " + statusURL, e); //$NON-NLS-1$
 				}
 			}
 		});
