@@ -132,19 +132,18 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 			public void changed(ProgressEvent e) {
 				if (e.current == e.total)
 					return;
-				IStatusLineManager slm = BrowserPart.this.parent
-						.getStatusLineManager();
-				IProgressMonitor monitor = slm != null ? slm
-						.getProgressMonitor() : null;
-				if (lastProgress == -1) {
-					lastProgress = 0;
-					if (monitor != null) {
-						monitor.beginTask("", e.total); //$NON-NLS-1$
-						slm.setCancelEnabled(true);
-					}
-				} else if (monitor != null && monitor.isCanceled()) {
-					browser.stop();
-					return;
+
+				if (isLinux) {
+					Display.getCurrent().asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							if (!browser.isDisposed()) {
+								updateBrowserWork(e);
+							}
+						}
+					});
+				} else {
+				    updateBrowserWork(e);
 				}
 				if (monitor != null)
 					monitor.worked(e.current - lastProgress);
@@ -153,20 +152,57 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 
 			@Override
 			public void completed(ProgressEvent e) {
-				IStatusLineManager slm = BrowserPart.this.parent
-						.getStatusLineManager();
-				IProgressMonitor monitor = slm != null ? slm
-						.getProgressMonitor() : null;
-				if (monitor != null) {
-					slm.setCancelEnabled(false);
-					monitor.done();
-				}
-				lastProgress = -1;
-				if (fontScalePercentage != 100) {
-					rescale();
-				}
-				String value = executeQuery("document.title"); //$NON-NLS-1$
-				BrowserPart.this.title = value != null ? value : "N/A"; //$NON-NLS-1$
+			    if (isLinux) {
+                    Display.getCurrent().asyncExec(new Runnable() {
+                        @Override
+						public void run() {
+                            completeWork();
+                        }
+                    });
+                } else {
+                    completeWork();
+                }
+			}
+
+			private void updateBrowserWork(ProgressEvent e) {
+			    IStatusLineManager slm = BrowserPart.this.parent
+                        .getStatusLineManager();
+                IProgressMonitor monitor = slm != null ? slm
+                        .getProgressMonitor() : null;
+                if (lastProgress == -1) {
+                    lastProgress = 0;
+                    if (monitor != null) {
+                        monitor.beginTask("", e.total); //$NON-NLS-1$
+                        slm.setCancelEnabled(true);
+                    }
+                } else if (monitor != null && monitor.isCanceled()) {
+                    browser.stop();
+                    return;
+                }
+                if (monitor != null)
+                    monitor.worked(e.current - lastProgress);
+                lastProgress = e.current;
+			}
+
+			private void completeWork() {
+			    IStatusLineManager slm = BrowserPart.this.parent
+                        .getStatusLineManager();
+                IProgressMonitor monitor = slm != null ? slm
+                        .getProgressMonitor() : null;
+                if (monitor != null) {
+                    slm.setCancelEnabled(false);
+                    monitor.done();
+                }
+                lastProgress = -1;
+
+                // The method is called in async way so the browser may have been disposed
+                if (!browser.isDisposed()) {
+	                if (fontScalePercentage != 100) {
+	                    rescale();
+	                }
+	                String value = executeQuery("document.title"); //$NON-NLS-1$
+	                BrowserPart.this.title = value != null ? value : "N/A"; //$NON-NLS-1$
+                }
 			}
 		});
 		browser.addStatusTextListener(event -> {

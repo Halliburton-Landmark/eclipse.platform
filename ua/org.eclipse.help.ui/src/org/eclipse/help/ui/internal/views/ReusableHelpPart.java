@@ -46,6 +46,7 @@ import org.eclipse.help.internal.search.federated.IndexerJob;
 import org.eclipse.help.internal.util.ProductPreferences;
 import org.eclipse.help.search.ISearchEngine2;
 import org.eclipse.help.ui.internal.DefaultHelpUI;
+import org.eclipse.help.ui.internal.ExecuteCommandAction;
 import org.eclipse.help.ui.internal.HelpUIPlugin;
 import org.eclipse.help.ui.internal.HelpUIResources;
 import org.eclipse.help.ui.internal.IHelpUIConstants;
@@ -1311,6 +1312,11 @@ public class ReusableHelpPart implements IHelpUIConstants, IActivityManagerListe
 			HelpURLConnection.parseQuery(url.substring(qloc+1), args);
 			((ISearchEngine2)desc.getEngine()).open((String)args.get("id")); //$NON-NLS-1$
 			return;
+		} else if (url.startsWith("command://")) { //$NON-NLS-1$
+			ExecuteCommandAction action = new ExecuteCommandAction();
+			action.setInitializationString(url.substring(10));
+			action.run();
+			return;
 		}
 		if (replace) {
 			if (openInternalBrowser(url))
@@ -1458,7 +1464,7 @@ public class ReusableHelpPart implements IHelpUIConstants, IActivityManagerListe
 		if (href != null && !href.startsWith("__")) { //$NON-NLS-1$
 			openAction.setTarget(target);
 			manager.add(openAction);
-			if (!href.startsWith("nw:") && !href.startsWith("open:")) { //$NON-NLS-1$ //$NON-NLS-2$
+			if (!href.startsWith("nw:") && !href.startsWith("open:") && !href.startsWith("command:")) { //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 				openInHelpAction.setTarget(target);
 				manager.add(openInHelpAction);
 			}

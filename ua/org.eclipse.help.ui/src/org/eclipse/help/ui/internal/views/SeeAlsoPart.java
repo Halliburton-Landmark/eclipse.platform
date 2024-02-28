@@ -119,11 +119,16 @@ public class SeeAlsoPart extends AbstractFormPart implements IHelpPart {
 				IHelpUIConstants.HV_BOOKMARKS_PAGE,
 				IHelpUIConstants.IMAGE_BOOKMARKS, listener);
 		}
-		if ((helpPart.getStyle() & ReusableHelpPart.INDEX) != 0) {
-			addPageLink(container, toolkit, Messages.SeeAlsoPart_index,
+
+		// BUG 381953
+        // Temporary hide Index action as it is not used at this time, Help do not implement an index
+        // See also: ReusableHelpPart.definePages
+
+		/*if ((helpPart.getStyle() & ReusableHelpPart.INDEX) != 0) {
+			addPageLink(container, toolkit, Messages.SeeAlsoPart_index, 
 				IHelpUIConstants.HV_INDEX_PAGE,
 				IHelpUIConstants.IMAGE_INDEX, listener);
-		}
+		}*/
 	}
 
 	private void addPageLink(Composite container, FormToolkit toolkit, String text, String id,
