@@ -47,6 +47,7 @@ import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.custom.BusyIndicator;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -128,8 +129,12 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 		});
 		browser.addProgressListener(new ProgressListener() {
 
+			boolean isLinux = System.getProperty("os.name").toLowerCase() //$NON-NLS-1$
+					.contains("linux"); //$NON-NLS-1$
+
 			@Override
 			public void changed(ProgressEvent e) {
+
 				if (e.current == e.total)
 					return;
 
@@ -145,9 +150,6 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 				} else {
 				    updateBrowserWork(e);
 				}
-				if (monitor != null)
-					monitor.worked(e.current - lastProgress);
-				lastProgress = e.current;
 			}
 
 			@Override
