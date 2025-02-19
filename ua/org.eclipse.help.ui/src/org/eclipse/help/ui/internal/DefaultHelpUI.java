@@ -315,6 +315,9 @@ public class DefaultHelpUI extends AbstractHelpUI {
 
 		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		Shell activeShell = getActiveShell();
+		if (activeShell == null && window != null) {
+			activeShell = window.getShell();
+		}
 		if (window != null && isActiveShell(activeShell, window)) {
 			IWorkbenchPage page = window.getActivePage();
 			if (page != null) {
