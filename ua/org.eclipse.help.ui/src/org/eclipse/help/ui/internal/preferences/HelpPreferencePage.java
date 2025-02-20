@@ -42,6 +42,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.activities.WorkbenchActivityHelper;
 import org.eclipse.ui.dialogs.PreferenceLinkArea;
 import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 import org.osgi.service.prefs.BackingStoreException;
@@ -144,7 +145,10 @@ public class HelpPreferencePage extends PreferencePage implements
 
 	private void createLinkArea(Composite parent) {
 		IPreferenceNode node = getPreferenceNode(WBROWSER_PAGE_ID);
-		if (node != null) {
+		if (node != null &&
+				// do not create the link when preference is filtered from the UI
+				!WorkbenchActivityHelper.filterItem(node)) {
+
 			PreferenceLinkArea linkArea = new PreferenceLinkArea(parent,
 					SWT.WRAP, WBROWSER_PAGE_ID,
 					Messages.HelpPreferencePage_message,
