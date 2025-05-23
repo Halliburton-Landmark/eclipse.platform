@@ -68,10 +68,7 @@ public class LocalScopeDialog extends TrayDialog {
 
 	@Override
 	protected void okPressed() {
-		boolean result = localHelpPage.performOk();
-		if (!result)
-			return;
-		super.okPressed();
+		localHelpPage.performOk();
 	}
 
 }
