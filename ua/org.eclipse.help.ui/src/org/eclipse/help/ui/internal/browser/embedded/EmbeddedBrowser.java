@@ -33,6 +33,7 @@ import org.eclipse.help.internal.util.ProductPreferences;
 import org.eclipse.help.ui.internal.HelpUIPlugin;
 import org.eclipse.help.ui.internal.Messages;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.util.Util;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
@@ -305,7 +306,22 @@ public class EmbeddedBrowser {
 				}
 			}
 		});
-	}
+
+		// ----------
+		// DSG fix to prevent application hang on browser dispose
+		if (Util.isLinux()) {
+			browser.addDisposeListener(e -> {
+				try {
+					while (Display.getDefault().readAndDispatch()) {
+						; // force dispose logic to be processed
+					}
+				} catch (Exception ex) {
+					ILog.of(getClass()).error(ex.getMessage(), ex);
+				}
+			});
+		}
+		// ----------
+}
 
 	private void initializeStatusBar(Browser browser) {
 
