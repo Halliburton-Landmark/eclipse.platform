@@ -38,6 +38,7 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IStatusLineManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.util.Util;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.LocationEvent;
@@ -234,6 +235,24 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 				}
 			}
 		});
+
+		// ----------
+		// DSG fix to prevent application hang on browser dispose
+		if (Util.isLinux()) {
+			browser.addDisposeListener(e -> {
+				try {
+					while (Display.getDefault().readAndDispatch()) {
+						;
+						;
+						; // force dispose logic to be processed
+					}
+				} catch (Exception ex) {
+					ILog.of(getClass()).error(ex.getMessage(), ex);
+				}
+			});
+		}
+		// ----------
+
 		contributeToToolBar(tbm);
 		contributeToMenu(menuManager);
 	}
