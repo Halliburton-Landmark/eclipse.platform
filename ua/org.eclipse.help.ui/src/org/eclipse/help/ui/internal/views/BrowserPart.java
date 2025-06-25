@@ -242,8 +242,6 @@ public class BrowserPart extends AbstractFormPart implements IHelpPart {
 			browser.addDisposeListener(e -> {
 				try {
 					while (Display.getDefault().readAndDispatch()) {
-						;
-						;
 						; // force dispose logic to be processed
 					}
 				} catch (Exception ex) {
