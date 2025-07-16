@@ -69,6 +69,7 @@ public class LocalScopeDialog extends TrayDialog {
 	@Override
 	protected void okPressed() {
 		localHelpPage.performOk();
+		super.okPressed();
 	}
 
 }
